@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.myapp"
+    android:versionCode="1"
+    android:versionName="0.1">
+
+    <uses-sdk android:minSdkVersion="21"
+          android:targetSdkVersion="33"
+          android:maxSdkVersion="33" />
+
+    <!-- Permissions indispensables -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    
+    <!-- Optionnel : pour Android 13+ si vous voulez lire les médias -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <application 
+        android:label="GoradPhoto" 
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:theme="@style/AppTheme"
+            android:name=".MainActivity"
+            android:label="GoradPhoto"
+            android:exported="true" >
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>

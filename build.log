@@ -1,0 +1,4 @@
+[34m[build] compiling resources [0m
+[34m[build] bundling resources [0m
+[34m[build] compiling java files [0m
+[31m[build]  [-d build/classes -classpath /root/android-sdk/platforms/android-30/android.jar:build/classes: src/com/myapp/MainActivity.java src/com/myapp/R.java] [0m
